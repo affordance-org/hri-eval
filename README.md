@@ -2,7 +2,9 @@
 
 https://github.com/user-attachments/assets/9f9f6c20-cfe0-4b2f-93f4-ab1914502f2b
 
-Roll out your robot policy in our room, with real human motion.
+Evaluating robots around people is hard. Testing with real people isn't safe, and simulated people don't move like real ones.
+
+We recorded a real person in a real room and rebuilt both in simulation. Roll out your robot policy there and get scored.
 
 ```bash
 git clone https://github.com/affordance-org/hri-eval && cd hri-eval
