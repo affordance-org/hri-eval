@@ -1,5 +1,5 @@
 """The smallest policy: GR00T balance with a zero walking command, arms held at the start pose.
-python run.py trials/stand_still --policy examples.stand_still:StandStill"""
+python run.py --policy examples.stand_still:StandStill"""
 import numpy as np
 
 import episode as E
