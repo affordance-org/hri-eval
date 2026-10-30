@@ -1,0 +1,51 @@
+name: Report a bug
+description: Something in run.py, the checker or the docs does not work as written.
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks. A command we can run and the full output help most.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: input
+    id: command
+    attributes:
+      label: Command
+      placeholder: python run.py --policy examples.walk_to_table:WalkToTable --episodes 4 --jobs 2
+    validations:
+      required: true
+  - type: textarea
+    id: output
+    attributes:
+      label: Terminal output
+      description: Paste the whole output, including the traceback.
+      render: shell
+    validations:
+      required: true
+  - type: input
+    id: commit
+    attributes:
+      label: hri-eval commit
+      description: Output of `git rev-parse HEAD`.
+    validations:
+      required: true
+  - type: textarea
+    id: env
+    attributes:
+      label: Environment
+      description: OS, Python version, and the output of `pip freeze | grep -i -E "mujoco|numpy|scipy|onnxruntime|osqp"`.
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: trial
+    attributes:
+      label: Trial files (optional)
+      description: The end of events.json, the failing gate from gates.json, or summary.json of the episode.
+      render: json

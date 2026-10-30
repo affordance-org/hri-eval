@@ -1,0 +1,100 @@
+name: Request a scenario
+description: Ask for a new scenario (a new task with people). Reactive people, more recordings and your own room go to Request a feature.
+title: "[Scenario] "
+labels: ["request", "scenario"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for asking. We build scenarios in the order people ask for them.
+        Today the eval has one scenario (`point-fetch`): a recorded person points at a backpack on a table, the robot fetches it and hands it over.
+        Everything you write here is public. Leave out anything private and contact us through https://affordance.homes instead.
+  - type: input
+    id: scenario
+    attributes:
+      label: Scenario in one line
+      description: What happens in the room?
+      placeholder: A seated person asks the robot for a cup from the kitchen counter.
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What do you want to test?
+      description: The behaviour you want to measure, and what counts as success or failure for you.
+      placeholder: |
+        The robot brings the cup and places it in the person's hand without touching their knees.
+        Fail if the robot touches the person anywhere except the hand.
+    validations:
+      required: true
+  - type: dropdown
+    id: person
+    attributes:
+      label: What should the person do?
+      options:
+        - Replay a recorded motion (like point-fetch today)
+        - React to the robot (reach, step back, wait, hand over)
+        - Several people in the room
+        - Not sure
+    validations:
+      required: true
+  - type: dropdown
+    id: room
+    attributes:
+      label: Which room?
+      options:
+        - The point-fetch room is fine
+        - A different home room (kitchen, bedroom, living room)
+        - A care or hospital room
+        - An office, lab or warehouse
+        - My own room (we would record it)
+        - Not sure
+    validations:
+      required: true
+  - type: dropdown
+    id: robot
+    attributes:
+      label: Your robot
+      options:
+        - Unitree G1 with two UMI grippers (available today)
+        - Unitree G1 with Dex3 hands
+        - Unitree H1
+        - Fourier GR-1
+        - Mobile manipulator (Hello Robot Stretch or similar)
+        - My own URDF or MJCF
+        - Other (write it below)
+    validations:
+      required: true
+  - type: dropdown
+    id: policy_type
+    attributes:
+      label: Your policy type
+      multiple: true
+      options:
+        - Joint level (ControlOutput, available today)
+        - Command level (CommandPolicy, available today)
+        - End-effector pose actions
+        - Vision or VLA policy (needs camera images)
+        - LeRobot policy
+        - ROS 2 stack
+        - Classical planner and controller
+        - Other (write it below)
+    validations:
+      required: true
+  - type: textarea
+    id: use
+    attributes:
+      label: How would you use it?
+      description: For example a paper, a regression test before a demo, comparing models, a safety review.
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: Anything else
+      description: Timeline, number of episodes you need, scores you care about, links.
+  - type: input
+    id: contact
+    attributes:
+      label: Contact (optional)
+      description: A GitHub handle is enough. For private contact use https://affordance.homes.

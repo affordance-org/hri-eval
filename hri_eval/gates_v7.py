@@ -286,6 +286,8 @@ def gate_g7(trial, m, tr, coll: StepCollector, C, weight, frame_stride=1, verbos
     w_l = np.array([f.get('left_arm_adaptation_weight', 0.0) for f in rm['frames']])
     w_r = np.array([f.get('right_arm_adaptation_weight', 0.0) for f in rm['frames']])
     consistency = []
+    A_LIMIT = {'robot': 0.002, 'bag': 0.003}
+    failed_at = {'robot': None, 'bag': None}
     for j in range(0, len(tk), frame_stride):
         t = float(tk[j])
         k = int(round(t / dt))
@@ -296,9 +298,13 @@ def gate_g7(trial, m, tr, coll: StepCollector, C, weight, frame_stride=1, verbos
         d.mocap_quat[:] = mquat[k + 1]
         mj.mj_kinematics(m, d)
         V = curled_skin(sk, rig, Pk[j], Qk[j], float(curl_k[j]))
-        surf = sk.surface(V)
+        surf = sk.surface(V) if None in failed_at.values() else None
         res['frames_checked'] += 1
         for name, geoms, rows in (('robot', robot_g, robot_rows), ('bag', bag_g, bag_rows)):
+            if failed_at[name] is not None:
+                # part a has failed for this side: the rest cannot make it pass, and sampling every geom near the
+                # skin costs seconds per frame for a robot that leans on the person, so stop checking this side
+                continue
             depth = 0.0
             who = None
             for g in geoms:
@@ -316,6 +322,8 @@ def gate_g7(trial, m, tr, coll: StepCollector, C, weight, frame_stride=1, verbos
                     depth, who = dpt, (m.geom(g).name or f'{m.body(m.geom_bodyid[g]).name}#g{g}',
                                        sk.names[sk.dom[surf.used[surf.tree.query(pts[int(np.argmin(sd))])[1]]]])
             rows.append((t, depth, who))
+            if depth > A_LIMIT[name] + 1e-9:
+                failed_at[name] = t
         # colliders follow the visible bones (frames on a physics step)
         if abs(t / dt - k) < 1e-6:
             for bone in SKIN_BODY_BONES:
@@ -369,6 +377,7 @@ def gate_g7(trial, m, tr, coll: StepCollector, C, weight, frame_stride=1, verbos
     res['a_bag_inside_skin_max_mm'] = br[1] * 1000
     res['a_bag_inside_skin_worst'] = {'t': br[0], 'geom_and_skin_bone': br[2]}
     res['a_bag_frames_over_3mm'] = [round(r[0], 3) for r in bag_rows if r[1] > 0.003][:40]
+    res['a_stopped_after_failure_at_s'] = dict(failed_at)     # robot / bag: None = every frame was checked
     ok_a = rr[1] <= 0.002 + 1e-9 and br[1] <= 0.003 + 1e-9
     # (b) physics-step contacts on the recipient
     bag_c = [c for c in coll.rec_contacts if c[3] == 'bag']
@@ -381,8 +390,18 @@ def gate_g7(trial, m, tr, coll: StepCollector, C, weight, frame_stride=1, verbos
     worst_info = None
     rob_depth = 0.0
     cache_V = {}
+    stopped_at = None
     for k, cs in sorted(by_step.items()):
         tkk = float(T[k])
+        if not ok_a:
+            # part a has failed, so G7 fails whatever part b finds: part b is not checked (each contact step costs a
+            # skin surface build and thousands of sampled robot points)
+            break
+        if off_skin or rob_depth > 0.002 + 1e-9:
+            # part b has failed: the rest cannot make it pass, and every further contact step costs a skin surface
+            # build (minutes for a robot that leans on the person), so stop; the reported values are up to here
+            stopped_at = tkk
+            break
         P, Q, backed = skin_bones_at_step(m, mpos[k + 1], mquat[k + 1], rm_arr, tkk)
         V = curled_skin(sk, rig, P, Q, float(np.interp(tkk, tk, curl_k)))
         surf = sk.surface(V)
@@ -412,7 +431,11 @@ def gate_g7(trial, m, tr, coll: StepCollector, C, weight, frame_stride=1, verbos
     res['b_n_bag_contacts_off_skin'] = len(off_skin)
     res['b_robot_recipient_contact_steps'] = len({c[0] for c in rob_c})
     res['b_robot_inside_skin_at_contact_steps_max_mm'] = rob_depth * 1000
+    res['b_stopped_after_failure_at_s'] = stopped_at      # None: every contact step was checked
     ok_b = (len(off_skin) == 0) and rob_depth <= 0.002 + 1e-9
+    if not ok_a:
+        ok_b = None
+        res['b_not_checked'] = 'part a failed, so G7 fails; part b was not checked'
     # (c) colliders follow the bones
     res['curl'] = res_curl
     if consistency:
@@ -436,7 +459,7 @@ def gate_g7(trial, m, tr, coll: StepCollector, C, weight, frame_stride=1, verbos
     res['d_hand_ang_speed_max_dps'] = {'t': amax[0], 'side': amax[1], 'value': amax[2]}
     res['d_hand_frame_jump_max_deg'] = {'t': jmax[0], 'side': jmax[1], 'value': jmax[2]}
     res['d_scope'] = ('frames where that arm is adapted (adaptation weight > 0 at either end of the frame pair); the '
-                      'unadapted recording is his real motion and is only reported')
+                      'unadapted recording is the person\'s real motion and is only reported')
     res['d_recorded_hand_speed_max_mps'] = max((r[2] for r in rec_speed), default=0.0)
     res['d_recorded_hand_ang_speed_max_dps'] = max((r[2] for r in rec_ang), default=0.0)
     phys_ang = 0.0

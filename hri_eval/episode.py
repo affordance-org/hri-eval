@@ -276,7 +276,7 @@ class RobotGravity:
 class EpisodeRunner:
     def __init__(self, controller, out_dir, xml=DEFAULT_XML, recipient=None, max_time=9.0, keyframe='start',
                  description='', allow_forbidden=False, telemetry=True, contacts_in_telemetry=True, check=True,
-                 verbose=True):
+                 verbose=True, xml_edit=None):
         self.controller = controller
         self.out = Path(out_dir)
         self.out.mkdir(parents=True, exist_ok=True)
@@ -289,8 +289,11 @@ class EpisodeRunner:
         self.contacts_in_telemetry = contacts_in_telemetry
         self.check = check
         self.verbose = verbose
-        # ---- the exact model: trial.xml written first, then loaded from it (the checker loads the same file)
+        # ---- the exact model: trial.xml written first, then loaded from it (the checker loads the same file);
+        # xml_edit(text) -> text may change the text first (run.py: the seeded start pose, variations.py)
         txt = portable_xml_text(self.src_xml)
+        if xml_edit is not None:
+            txt = xml_edit(txt)
         (self.out / 'trial.xml').write_text(txt)
         self.m = mj.MjModel.from_xml_path(str(self.out / 'trial.xml'))
         stale = self.out / 'trial.mjb'
@@ -817,17 +820,50 @@ class EpisodeRunner:
             'Gripper finger servos: assumed spec 35 N per finger (position servo kp 5000 N/m, kv 30, force-limited to '
             f'+/-35 N); assumed WIDE-STROKE gripper: command range {fing[0]:g} to {fing[1]:g} m per finger, open gap '
             '153 mm (35 mm per finger wider than the reference model); not manufacturer data.',
-            'The recipient is a REPLAYED RECORDING (kinematic, infinite mass). His left hand is his own avatar hand with a '
-            'SCRIPTED finger curl (the avatar has no finger bones and the recording has no finger motion), physically one '
-            'rigid collider per finger segment fitted to the curled skin, plus skin-matched convex pieces for his '
-            'forearms and right hand. The same bones drive the physics colliders and the motion shown on the website.' + (
-                ' His pelvis, torso, thighs, calves and feet are also physical: rigid convex pieces fitted to his visible '
-                'surface and posed at his bones every step; they collide with the robot and the bag, not with the room.'
+            'The recipient is a REPLAYED RECORDING (kinematic, infinite mass). The left hand is the person\'s own avatar '
+            'hand with a SCRIPTED finger curl (the avatar has no finger bones and the recording has no finger motion), '
+            'physically one rigid collider per finger segment fitted to the curled skin, plus skin-matched convex pieces '
+            'for the forearms and the right hand. The same bones drive the physics colliders and recipient-motion.json.' + (
+                ' The pelvis, torso, thighs, calves and feet are also physical: rigid convex pieces fitted to the visible '
+                'surface and posed at the bones every step; they collide with the robot and the bag, not with the room.'
                 if self._has_body_colliders() else ''),
             'Robot start pose = the fetcher\'s recorded frame-120 pelvis pose; backpack mass 1.2 kg and gripper mass '
             '0.8 kg are assumed values.']
         extra = self.controller.disclosures() if hasattr(self.controller, 'disclosures') else []
         return base + list(extra)
+
+    def _start_source(self, q0):
+        """Where the robot start pose comes from: the second person's (the fetcher's) recorded frame-120 pelvis pose
+        (the v9 keyframe) or a pose chosen for the scenario."""
+        try:
+            txt = Path(V9_XML).read_text()
+            rec = [float(v) for v in re.search(r'<key\s+name="start"\s+qpos="([^"]*)"', txt).group(1).split()[:7]]
+        except Exception:  # noqa
+            rec = None
+        if rec is not None and all(abs(float(a) - b) < 1e-9 for a, b in zip(q0[self.free_q:self.free_q + 7], rec)):
+            return "the second person's (the fetcher's) recorded frame-120 pelvis pose"
+        return ('chosen for this scenario, not taken from the recording (with a variation seed: moved as in '
+                'variation.json)')
+
+    def _recipient_kind(self):
+        """How the person was driven in THIS episode, from the recipient's own decision log."""
+        r = self.recipient
+        if r is None:
+            return None
+        ops = [d.get('op') for d in getattr(r, 'decisions', [])]
+        adapted = any(o in ('engage', 'move', 'release') for o in ops)
+        curled = any(o == 'curl' for o in ops)
+        hand = getattr(r, 'hand', 'pinch')
+        hand_txt = {'curl': 'left hand as rigid finger-segment colliders fitted to the skin, right hand and forearms as '
+                            'skin-fitted convex pieces',
+                    'hook': 'palm and curled-finger hook hand collider',
+                    'skin': 'hands and forearms as skin-fitted convex pieces'}.get(hand, 'two-pad pinch hand colliders')
+        return ('replayed recording, kinematic: ' +
+                ('pointing gesture, then the quietest recorded window played back and forth (idle ping-pong); '
+                 if 'idle' in ops else '') +
+                ('arm adapted by reach decisions (see schedules)' if adapted else 'not adapted (no reach, no arm IK)') +
+                ('; finger curl scheduled' if curled else '; finger curl 0') + '; ' + hand_txt +
+                ('; pelvis, torso and leg colliders' if self._has_body_colliders() else ''))
 
     def _write_scene_context(self, T):
         m = self.m
@@ -854,10 +890,8 @@ class EpisodeRunner:
                                    'mass_kg': float(sum(m.body_mass[b] for b in self.bag_bodies))}),
                'robot_start': {'keyframe': self.keyframe, 'pelvis_pos': q0[self.free_q:self.free_q + 3].tolist(),
                                'pelvis_yaw_rad': yaw_of(q0[self.free_q + 3:self.free_q + 7]),
-                               'source': "the second person's frame-120 pelvis pose"},
-               'recipient': {'person': 'person_01', 'kind': 'replayed recording, retimed (holds only), adapted left arm '
-                             '(2-bone IK) during the receive, kinematic ' + ('palm + curled-finger hook hand'
-                             if getattr(self.recipient, 'hand', 'pinch') == 'hook' else 'two-pad pinch hand'),
+                               'source': self._start_source(q0)},
+               'recipient': {'person': 'person_01', 'kind': self._recipient_kind(),
                              'mocap_bodies': self.mocap_names,
                              'schedules': self.recipient.schedules_json() if self.recipient is not None else None},
                'recording': str(RCP.MOTION.parent.parent)}

@@ -233,7 +233,7 @@
  "dq_max_lift": 0.03,
  "lift_profile": "minjerk",
  "approach_step_T": 0.8,
- "start_note": "Chosen so that the assumed head camera sees the person, his pointing arm and all four tabletop objects unoccluded for the whole pointing gesture, from the open floor between the tall shelf and the bed, 1.9 m or more from the person.",
+ "start_note": "Chosen so that the assumed head camera sees the person, their pointing arm and all four tabletop objects unoccluded for the whole pointing gesture, from the open floor between the tall shelf and the bed, 1.9 m or more from the person.",
  "headcam": {
   "name": "head_cam",
   "body": "torso_link",

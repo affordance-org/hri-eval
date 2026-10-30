@@ -1,91 +1,31 @@
 #!/usr/bin/env python3
-"""v9 INDEPENDENT gate checker = the v7 checker (below) with the reference scene switched to v9 and the strap-specific
-checks generalised to the bag BODY (v9 bag: one rigid body, no handle, no strap):
-  * G0 reference scene = harness/g1_umi_room_v9_body.xml (v9 base scene + the v7 recipient colliders, grafted
-    verbatim by build_v9_body.py).  v7-scene trials need --reference-xml ../../v7/harness/g1_umi_room_v7_body.xml,
-    v3-scene trials --reference-xml g1_umi_room_v3_hook.xml (their bag differs, so G0 fails against v9 by design);
-  * G0 compares the joints of the REFERENCE's bag subtree by name (v9: backpack_free; v3-v7: backpack_free +
-    bag_strap_anchor + bag_strap_bend) and requires the trial's bag subtree to have exactly the same joint names
-    (v7 compared the fixed list STRAP_JOINTS, which a strapless bag would fail and a strapped trial against a strapless
-    reference would pass silently);
-  * G0 also compares the bag's sites (bag_grasp_top*, bag_com, bag_top_center: the grasp frame a controller reads) by
-    name with the reference;
-  * G3 / G4 / G8 pad attribution is to the bag SUBTREE (unchanged code: with the v9 bag the subtree is the bag body,
-    so a finger contact on the bag body is finger support; unit-tested in tests/test_v9_gates.py);
-  * G5 UMI clearance ("every UMI collider >= 5 cm from the handle"): the reference geoms are the strap links'
-    collision geoms when the bag has strap links (v3-v7, unchanged), otherwise every bag-body collision geom (v9).
-    The geoms used are reported (umi_clearance_reference);
-  * G7 unchanged.
+"""Independent checker for one HRI Eval trial folder (definitions and thresholds: docs/scoring.md).
 
-v7 INDEPENDENT gate checker = v6 with gates_v7 and:
-  * G0 reference scene = harness/g1_umi_room_v7_body.xml (v7 base scene: 40 mm strap tab, stiffer pad/strap contact;
-    + the person's curl hand and body colliders).  Trials built on the v3 scene differ from it (check them with
-    --reference-xml g1_umi_room_v3_hook.xml);
-  * G6 pace limit 3.0 x 4.4 s = 13.2 s after at most 1.0 s of pre-roll (v6: 2.5 x = 11.0 s);
-  * contact class `recipient_body` = the v7 torso/pelvis/leg colliders (recipient_<pelvis|spine_0x|thigh|calf|foot>):
-    any robot contact with them is a G2 violation (as recipient_other); bag contact with them is allowed and reported;
-    G5 "recipient only" = the bag touches only recipient classes {rpad, recipient_body} AND at least one rpad body (his
-    hand/arm); the G5 support means still count rpad only;
-  * G9 receives the pickup lift-off time (G3) and the opening command (G8e) for the v7 G9b windows.
+usage: python hri_eval/check_gates.py TRIAL_DIR [--stride 5] [--frame-stride 1] [--reference-xml FILE] [--v4-only]
+                                      [--out FILE]
 
-v6 INDEPENDENT gate checker = v5 with gates_v6 (G7 against the CURLED visible skin, G8e release provenance);
-in curl scenes every recipient_hand_l* body (palm + finger segments) is recipient support class `rpad`.
+It loads TRIAL_DIR/trial.xml, starts from row 0 of trajectory.npz and re-simulates the whole episode with only the
+recorded motor inputs (ctrl) and the recorded person poses (mocap_pos, mocap_quat). Contacts, forces, distances and
+poses come from that re-simulation, never from the policy or the runner's telemetry. It writes gates.json into
+TRIAL_DIR (or FILE with --out), prints a pass/fail summary and the details of every failing gate, and exits with 0 only
+if all gates pass.
 
-v5 INDEPENDENT gate checker = v4 gates G0-G6 UNCHANGED + G7 visual honesty, G8 controlled handover, G9 smoothness
-(gates_v5.py; their definitions are in its docstring).  In scenes with skin-matched recipient bodies
-(recipient_hand_l, ...) the recipient support class `rpad` is every recipient_* skin body (in v3/v4 scenes it stays the
-pads / hook, so G0-G6 results of old trials are unchanged).  usage: check_gates.py TRIAL_DIR [--stride 5]
-[--reference-xml X] [--frame-stride 1] [--v4-only]
+  G0_invariants           an unmodified closed-loop episode: no state, force or model writes, plain torque motors at
+                          the URDF limits, robot, bag and physics equal to the reference scene (default
+                          hri_eval/scene/room_point_fetch.xml, the scene run.py simulates), start = keyframe 'start'
+                          with the seeded variation of variation.json recomputed from its seed
+  G1_motor_replay         the re-simulated qpos equals the recorded qpos to < 1e-6 at every physics step
+  G2_no_fall              pelvis >= 0.55 m, torso tilt < 25 deg, only allowed contacts            (score: no fall)
+  G3_pickup               bag >= 5 cm up, held only by the finger pads, for >= 0.5 s             (score: pickup)
+  G4_carry                while held by the pads only: bag moves >= 0.4 m, pelvis >= 0.3 m      (score: carry)
+  G5_handover             the person alone holds the bag for the last >= 1.0 s                   (score: handover)
+  G6_pace                 handover complete within 3.0 x 4.4 s = 13.2 s                          (score: pace)
+  G7_visual_honesty       the simulated person colliders match the visible skin
+  G8_controlled_handover  no drop or throw, peak force, pinch until taken, privileged and release events logged
+  G9_smoothness           arm targets and gripper speeds are smooth
 
----- v4 docstring ----
-INDEPENDENT gate checker for an HRI fetch-and-handover trial directory (v3 copy of ../../harness/check_gates.py).
-
-v3 changes (all other gate logic identical to v2):
-  * the BAG is the whole `backpack` subtree (bag body + strap links bag_strap_tab, bag_strap_loop): contacts between
-    bag bodies are internal and ignored; contacts of any bag body with the outside count as bag support/contact;
-    robot finger contacts on the strap links are finger contacts (allowed, and count as finger support);
-  * recipient support class `rpad` = recipient_palm_pad / recipient_thumb_pad (pinch scene) or recipient_hook_hand
-    (hook scene);
-  * G5 UMI clearance is measured to every strap collision geom (was: the rigid handle bag_1_15);
-  * G6 pace limit 2.5 x 4.4 s = 11.0 s after at most 1.0 s of pre-roll (was 1.5 x);
-  * G0 also compares the strap joints and the finger servo gains with the reference scene (by name).
-
-usage: python check_gates.py TRIAL_DIR [--stride 5] [--out gates.json]      (exit code 0 only if ALL gates pass)
-
-Everything below is measured from a re-simulation of trial.xml: the initial state is trajectory.npz row 0 and the ONLY
-inputs afterwards are the recorded ctrl[i] and mocap_pos/quat[i] (row i = the inputs applied during the step that
-produced state i).  Contacts, support forces, distances and poses come from that re-simulation, never from the
-controller's telemetry or self-reports (summary.json is only used for G0's instrumentation counters, and
-controller-log.npz only for the commanded base height that relaxes the pelvis-height floor during a commanded crouch).
-
-Contact convention: after mj_step the MjData kinematics/contacts/efc forces belong to the PRE-step configuration, so
-the analysis of state k is done right after the step k -> k+1.  A contact "carries force" if its normal force exceeds
-EPS_N = 0.01 N.  Support attribution: the world-frame force each contact exerts on the bag, grouped by the other
-body's class (robot finger pads L/R, UMI bases, other robot links, recipient pads, other recipient colliders, table,
-floor, other world geoms).  Bag weight 1.2 kg * 9.81 = 11.772 N.
-
-Gates (all must pass):
- G0 invariants   neq == 0; mocap bodies only recipient_*; no gravcomp; physics options; plain torque motors with
-                 ctrlrange == forcerange == URDF caps; recorded motor ctrl within caps; robot/bag physical parameters
-                 identical to the harness reference scene; time = k*dt from 0 (one continuous episode) starting at
-                 keyframe 'start' with zero velocity; summary: closed_loop_full_episode, not diagnostic, 0 qpos/qvel
-                 writes after init, 0 xfrc/qfrc_applied, model unchanged; fingerprint of the model compiled from
-                 trial.xml == the fingerprint the runner recorded for the model it simulated.
- G1 replay       re-simulated qpos == recorded qpos to < 1e-6 at every step.
- G2 no fall      pelvis z >= 0.55 m (>= 0.30 m within 1 s after a commanded base height < 0.65 m), torso tilt < 25 deg,
-                 robot<->world contacts only foot links<->floor (UMI<->table < 5 N allowed), robot<->bag only through the
-                 UMIs (non-finger UMI parts < 5 N), robot<->recipient only UMI<->recipient pads < 5 N.
- G3 pickup       bag >= 5 cm above its initial height AND supported only by robot finger pads (no other bag contact)
-                 continuously for >= 0.5 s.
- G4 carry        within one continuous robot-pads-only support interval: bag horizontal travel >= 0.4 m and pelvis
-                 horizontal travel >= 0.3 m (max displacement from the interval start).
- G5 handover     final interval [t_hc, end]: no robot-bag contact, every UMI collider >= 5 cm from the handle, bag
-                 supported only by recipient pads (mean vertical support >= 0.8 W), lasting >= 1.0 s; a G3 pickup before
-                 t_hc; robot standing stably over the last 1.0 s (pelvis >= 0.55 m, tilt < 25 deg, pelvis speed < 0.5 m/s,
-                 G2 contact rules).
- G6 pace         t_hc - min(t_motion_start, 1.0 s) <= 2.5 * 4.4 s (human f120 -> f252); t_motion_start = first step
-                 (a foot's floor normal force < 1 N) or pelvis > 10 cm from its start, whichever is first (a settling
-                 sway of the balance policy is not the start of the task motion).
+--stride N analyses every Nth physics step for G2 to G6, --frame-stride N every Nth 30 fps frame in G7, --v4-only
+skips G7 to G9.
 """
 from __future__ import annotations
 
@@ -102,7 +42,7 @@ import numpy as np
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import gates_v7 as G5V  # noqa: E402  (v7 gates; module alias kept)
-REFERENCE_XML = HERE / 'scene' / 'g1_umi_room_v10_final_start.xml'
+REFERENCE_XML = HERE / 'scene' / 'room_point_fetch.xml'     # the scene run.py simulates
 URDF_CAPS = {'hip_pitch': 88.0, 'hip_roll': 139.0, 'hip_yaw': 88.0, 'knee': 139.0, 'ankle_pitch': 35.0,
              'ankle_roll': 35.0, 'waist_yaw': 88.0, 'waist_roll': 35.0, 'waist_pitch': 35.0, 'shoulder_pitch': 25.0,
              'shoulder_roll': 25.0, 'shoulder_yaw': 25.0, 'elbow': 25.0, 'wrist_roll': 25.0, 'wrist_pitch': 5.0,
@@ -258,7 +198,9 @@ UMI_CLS = {'finger_L', 'finger_R', 'umi_base'}
 WORLD_CLS = {'floor', 'table', 'world_other', 'other_body'}
 
 
-def model_checks(m, ref):
+def model_checks(m, ref, ref_key=None):
+    """ref_key: the expected keyframe 'start' qpos (default: the reference's; run.py variations: the reference's with
+    the seeded variation applied)."""
     out = {}
     mocap = [m.body(b).name for b in range(m.nbody) if m.body_mocapid[b] >= 0]
     out['neq'] = int(m.neq)
@@ -367,7 +309,7 @@ def model_checks(m, ref):
                 diffs.append(f'geom {k}')
         if m.nq != ref.nq:                                  # v9: a strap bag and a strapless bag differ in nq
             diffs.insert(0, f'keyframe start qpos: nq {m.nq} != reference {ref.nq}')
-        elif not np.allclose(m.key('start').qpos, ref.key('start').qpos, rtol=0, atol=1e-12):
+        elif not np.allclose(m.key('start').qpos, ref.key('start').qpos if ref_key is None else ref_key, rtol=0, atol=1e-12):
             diffs.append('keyframe start qpos')
     out['physical_param_diffs_vs_reference'] = diffs[:30]
     out['physical_params_match_reference'] = not diffs
@@ -376,7 +318,7 @@ def model_checks(m, ref):
 
 def check(trial_dir, stride=5, write=True, reference_xml=REFERENCE_XML, verbose=False, v5=True, frame_stride=1):
     trial = Path(trial_dir)
-    res = {'trial': str(trial), 'gates': {}, 'checker': 'v9/harness/check_gates.py', 'mujoco': mj.__version__,
+    res = {'trial': str(trial), 'gates': {}, 'checker': 'hri_eval/check_gates.py', 'mujoco': mj.__version__,
            'reference_xml': str(reference_xml),
            'stride_steps': stride, 'eps_contact_N': EPS_N, 'bag_weight_N': WEIGHT}
     m = mj.MjModel.from_xml_path(str(trial / 'trial.xml'))
@@ -392,8 +334,19 @@ def check(trial_dir, stride=5, write=True, reference_xml=REFERENCE_XML, verbose=
     dt = m.opt.timestep
 
     # ------------------------------------------------------------------------------------------------ G0
-    mc, caps = model_checks(m, ref)
+    # seeded variation (run.py --seed, variations.py): recomputed here from the seed, never taken from the trial
+    var_ok, ref_key, var = True, None, None
+    if (trial / 'variation.json').exists():
+        import variations as V
+        stored = json.loads((trial / 'variation.json').read_text())
+        var = V.sample(stored['seed'])
+        var_ok = all(abs(float(stored.get(k, np.nan)) - var[k]) < 1e-12 for k in V.KEYS)
+        if ref is not None:
+            ref_key = V.apply_key(ref.key('start').qpos, ref, var)
+    mc, caps = model_checks(m, ref, ref_key)
     g0 = dict(mc)
+    g0['variation'] = var
+    g0['variation_matches_seed'] = var_ok
     motor_ids = [[a for a in range(m.nu) if m.actuator_trnid[a, 0] == m.joint(j).id][0] for j in JOINTS_29]
     ratio = np.abs(ctrl[:, motor_ids]) / caps
     g0['max_recorded_ctrl_over_cap'] = float(ratio.max()) if N else 0.0
@@ -421,7 +374,7 @@ def check(trial_dir, stride=5, write=True, reference_xml=REFERENCE_XML, verbose=
             g0['initial_state_is_keyframe_start'], g0['summary_closed_loop_full_episode'], g0['summary_not_diagnostic'],
             g0['summary_qpos_qvel_writes_after_init'] == 0, g0['summary_max_abs_xfrc_applied'] == 0,
             g0['summary_max_abs_qfrc_applied'] == 0, g0['summary_model_changed_ticks'] == 0,
-            g0['model_fingerprint_matches_summary']]
+            g0['model_fingerprint_matches_summary'], g0['variation_matches_seed']]
     g0['pass'] = bool(all(cond))
     res['gates']['G0_invariants'] = g0
 

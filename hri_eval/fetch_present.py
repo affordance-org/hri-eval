@@ -27,8 +27,8 @@ v9 POINT, INFER, FETCH AND PRESENT (no handover) on the v9 body scene (rigid bac
 Started from a copy of v7/variants/v7-present-fallback/present_ctrl.py (approach, carry, hold-out presentation, idle
 recipient, smoothing, drop detection).  Changes:
 
-* PERCEPTION in the 50 Hz loop (class Perception): ideal perception of the recipient's skeleton (18 keypoints from his
-  replayed motion exactly as the runner poses him: Recipient6.full_pose(t) at the tick time) and of the four tabletop
+* PERCEPTION in the 50 Hz loop (class Perception): ideal perception of the recipient's skeleton (18 keypoints from their
+  replayed motion exactly as the runner poses the person: Recipient6.full_pose(t) at the tick time) and of the four tabletop
   objects (bounding-box centres of their collision meshes at their TRUE simulated poses).  Pointing gesture = an arm
   whose elbow is extended (> point_elbow_deg), whose wrist is at least point_reach_m horizontally away from the chest and
   above hip height, held for >= point_hold_s.  Pointing ray = shoulder (upper-arm joint) -> wrist (hand joint), origin
@@ -227,7 +227,7 @@ DEFAULT = dict(
 # ============================================================================================ perception
 class Perception:
     """Pointing-gesture perception and target inference, called once per 50 Hz tick (causal: it reads only the state
-    at the tick time).  Ideal perception: the recipient skeleton is his replayed motion as the runner poses him, the
+    at the tick time).  Ideal perception: the recipient skeleton is their replayed motion as the runner poses it, the
     object centres come from the TRUE simulated object poses."""
 
     def __init__(self, m, rcp, p):
@@ -564,8 +564,17 @@ class GatedPerception(Perception):
 
 # ============================================================================================ runner
 class PointFetchRunner(E.EpisodeRunner):
-    """EpisodeRunner whose recipient disclosure states what THIS episode does with the recipient (pointing gesture
-    from his own recording, then idle only: no adaptation, no curl, no contact)."""
+    """EpisodeRunner whose recipient disclosure states what the point-fetch scenario does with the person, for every
+    policy alike (their recorded pointing gesture, then idle only: no adaptation, no curl). What a policy does (the
+    baseline perceives the gesture and never lets go) is in that policy's own disclosures()."""
+
+    RECIPIENT_DISCLOSURE = (
+        'The person (recipient) is a REPLAYED RECORDING (kinematic, infinite mass): their clip plays from frame 120 '
+        '(their pointing gesture, frames 128 to 163) into their quietest recorded window (frames 183 to 219) and '
+        'ping-pongs there for the rest of the episode (it also plays backward, at most 0.45 x real time) instead of '
+        'freezing. The person does NOT react to the robot: no reach, no arm IK, and the finger curl stays 0. Their '
+        'hands, forearms, pelvis, torso and legs are kinematic colliders posed at their recorded bones; they collide '
+        'with the robot and the bag, not with the room.')
 
     def disclosures(self):
         base = super().disclosures()
@@ -573,14 +582,7 @@ class PointFetchRunner(E.EpisodeRunner):
             if x.startswith('Robot start pose = '):
                 base[i] = self.start_pose_disclosure(x)
             if x.startswith('The recipient is a REPLAYED RECORDING'):
-                base[i] = ('The recipient is a REPLAYED RECORDING (kinematic, infinite mass): his clip plays from frame 120 '
-                           '(his own pointing gesture, frames 128 to 163, which the robot perceives) into his quietest '
-                           'recorded window (frames 183 to 219) and ping-pongs there for the rest of the episode (it also '
-                           'plays backward, at most 0.45 x real time) instead of freezing. He is NOT adapted: no reach, no '
-                           'arm IK, and the finger curl stays 0. His hands, forearms, pelvis, torso and legs are kinematic '
-                           'colliders posed at his recorded bones; they collide with the robot and the bag, not with the '
-                           'room. NO HANDOVER: the robot presents the bag in front of his left hand and keeps holding it; '
-                           'he never touches it.')
+                base[i] = self.RECIPIENT_DISCLOSURE
         return base
 
 
@@ -946,7 +948,7 @@ class PointFetch:
         self.rcp_hand = rec.P[200, rec.idx['hand_l']].copy()
         if not any(d.get("op") == "idle" for d in self.rcp.decisions):   # run.py already set it
             self.rcp.idle(0.0)
-        ctx.event('recipient_idle', 'the recipient plays his recording on (his own pointing gesture f128-f163) into his '
+        ctx.event('recipient_idle', 'the person plays their recording on (their pointing gesture f128-f163) into their '
                   'quietest recorded window (f183-f219) and ping-pongs there for the whole episode (no reach, no curl)')
         self.perc = GatedPerception(m, self.rcp, p) if p['headcam'] else Perception(m, self.rcp, p)
         gate = {}
@@ -1360,7 +1362,7 @@ class PointFetch:
                       '(perception every tick)')
             if p['watch_pitch'] != 0.0:
                 reason = ('balance in place and watch the person, the torso leaned back a little so that the chest '
-                          'camera looks up toward him: no walking until a pointed-at object is committed (perception '
+                          'camera looks up toward the person: no walking until a pointed-at object is committed (perception '
                           'every tick)')
             if self.perc.target >= 0:
                 self.plan_after_commit(ctx, ds)
@@ -1737,7 +1739,7 @@ class PointFetch:
         p = self.p
         return ('v11 frontal fetch. GR00T WBC (Balance/Walk ONNX, its own trained observations) drives legs+waist from velocity / base-height '
                 'commands; a PI path follower turns planned pelvis paths into velocity commands from the simulator '
-                'pelvis pose. PERCEPTION every 50 Hz tick: the recipient skeleton (18 keypoints, ideal perception of his '
+                'pelvis pose. PERCEPTION every 50 Hz tick: the person\'s skeleton (18 keypoints, ideal perception of their '
                 'replayed motion) and the four tabletop objects (TRUE poses)'
                 + ('' if not p['headcam'] else
                    ', each used only while it is inside the ASSUMED head camera frame and unoccluded (mj_ray from the '
@@ -1768,9 +1770,9 @@ class PointFetch:
 
     def disclosures(self):
         p = self.p
-        where = 'in front of him' if p['present_anchor'] == 'chest' else 'in front of his idle left hand'
+        where = 'in front of the person' if p['present_anchor'] == 'chest' else "in front of the person's idle left hand"
         return ['NO HANDOVER (fallback episode): the robot picks the bag up, carries it to the person, holds it out '
-                f'{where} and keeps holding it until the episode ends; he never reaches or touches it '
+                f'{where} and keeps holding it until the episode ends; the person never reaches for it or touches it '
                 '(gates G5 handover and G6 pace fail by design).',
                 self.perception_disclosure(),
                 'The robot balances in place (zero velocity command) until the target is committed; the stance, approach '
@@ -1810,14 +1812,14 @@ class PointFetch:
                     'metres away; this run assumes a '
                     f"forward-looking RGB camera in the head (on the centre line of the face, pitched {mt['pitch_down_deg']:.0f} "
                     f"deg down, 16:9, {mt['hfov_deg']:.0f} deg horizontal field of view; pose from the torso link, no mass, "
-                    'not part of the physics model). The robot reads the person\'s skeleton keypoints from his replayed '
+                    'not part of the physics model). The robot reads the person\'s skeleton keypoints from their replayed '
                     'recording and the object centres from their TRUE simulated poses (no camera images, detector or '
                     'noise), but uses a keypoint only while it is inside that camera\'s frame and unoccluded (a ray from '
                     'the camera, against the simulated scene), and compares only objects in view. Pointing needs the '
                     'shoulder, elbow and wrist of the arm, the chest and both hips in view. The target inference runs in '
                     'the control loop and decides when and where the robot moves: ' + rule)
-        return ('IDEAL PERCEPTION: the robot reads the person\'s skeleton (18 keypoints) directly from his replayed '
-                'recording as the simulator poses him at each 50 Hz tick, and the four tabletop object centres from their '
+        return ('IDEAL PERCEPTION: the robot reads the person\'s skeleton (18 keypoints) directly from their replayed '
+                'recording as the simulator poses the person at each 50 Hz tick, and the four tabletop object centres from their '
                 'TRUE simulated poses; no camera images, detector or noise. The target inference itself runs in the '
                 'control loop and decides when and where the robot moves: ' + rule)
 
@@ -1825,13 +1827,13 @@ class PointFetch:
         p = self.p
         if p['carry_mode'] == 'turn_walk' and p['present_anchor'] == 'chest':
             return ('Presentation point (ideal perception of the person): the top of the bag is placed '
-                    f"{p['present_dist']:.2f} m in front of the person's recorded chest (frame 200) along his facing direction "
-                    f"(yaw {p['nfar_yaw_deg']:.0f} deg); the robot ends its walk facing his chest, and its stance is solved so "
+                    f"{p['present_dist']:.2f} m in front of the person's recorded chest (frame 200) along their facing direction "
+                    f"(yaw {p['nfar_yaw_deg']:.0f} deg); the robot ends its walk facing their chest, and its stance is solved so "
                     'that the bag, held at the frozen carry pose, lands at that point horizontally; the bag is presented at '
                     'the height it was carried at; after the stop the arm is not moved.')
         return ('Presentation point (ideal perception of the person): the top of the bag is placed '
                 f"{p['present_dist']:.2f} m in front of the person's recorded idle left shoulder (frame 200) along yaw "
-                f"{p['nfar_yaw_deg']:.0f} deg, at {p['present_z']:.2f} m height, i.e. in front of his hanging left hand; "
+                f"{p['nfar_yaw_deg']:.0f} deg, at {p['present_z']:.2f} m height, i.e. in front of their hanging left hand; "
                 'the robot heading is the direction of its last, straight walk segment, the stance is solved so that the '
                 'bag, held at the carry pose, lands at that point; after the stop the arm is not moved.')
 
@@ -1845,7 +1847,7 @@ class PointFetch:
                        'camera looks up toward the person; the walk velocity command stays zero. From the commit the '
                        f"lean is removed within {p['unlean_T']:.1f} s, and the arm motions planned at the commit are "
                        'planned for the upright torso (the waist angles GR00T stands with when it does not lean). The '
-                       'camera still cannot see his shoulder, elbow or head; '
+                       'camera still cannot see their shoulder, elbow or head; '
                        'perception does not use the camera image.')
         if p['approach_mid']:
             vias = '; '.join(f"at {fr * 100:.0f}% of the walk time: x {x_:.3f} m, y {y_:.3f} m, heading {yw_:.0f} deg"
@@ -2013,7 +2015,7 @@ def main():
                               description='v11 frontal point-fetch-present: GR00T WBC; the robot perceives the recipient\'s '
                                           'pointing gesture, infers the pointed-at object, then walks to the backpack, faces '
                                           'it, grasps the bag body directly with the left UMI, carries it in front of its '
-                                          'body to the recipient and holds it out to him, facing him (FETCH AND PRESENT, '
+                                          'body to the person and holds it out to them, facing them (FETCH AND PRESENT, '
                                           'no handover)')
     s = runner.run()
     print(json.dumps(s['outcome'], default=str))

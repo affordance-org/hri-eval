@@ -1,0 +1,99 @@
+name: Request a hosted evaluation
+description: Send us a checkpoint and we run the eval for you.
+title: "[Hosted eval] "
+labels: ["request", "hosted-eval"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Hosted evaluation is not a running service yet. This form tells us what you need, and we reply in this issue.
+        You can already run the eval yourself (Python 3.12 or newer, CPU only; we run it on Linux): see [docs/quickstart.md](https://github.com/affordance-org/hri-eval/blob/main/docs/quickstart.md).
+        This issue is public. Do not attach private weights or private links here. We will contact you to arrange a private transfer.
+  - type: input
+    id: policy
+    attributes:
+      label: Policy name
+      placeholder: my-vla-v2
+    validations:
+      required: true
+  - type: dropdown
+    id: robot
+    attributes:
+      label: Robot the checkpoint was trained for
+      options:
+        - Unitree G1 with two UMI grippers (available today)
+        - Unitree G1 with Dex3 hands
+        - Unitree H1
+        - Fourier GR-1
+        - Mobile manipulator (Hello Robot Stretch or similar)
+        - My own URDF or MJCF
+        - Other (write it below)
+    validations:
+      required: true
+  - type: dropdown
+    id: interface
+    attributes:
+      label: How the checkpoint acts
+      options:
+        - Joint targets (fits the joint level interface)
+        - Base velocity, arm joints and grippers (fits the command level interface)
+        - End-effector poses
+        - Other (write it below)
+    validations:
+      required: true
+  - type: dropdown
+    id: inputs
+    attributes:
+      label: What the checkpoint needs as input
+      multiple: true
+      options:
+        - Robot proprioception
+        - Person keypoints
+        - Object poses
+        - RGB camera images
+        - Depth images
+        - Language instruction
+        - Other (write it below)
+    validations:
+      required: true
+  - type: dropdown
+    id: framework
+    attributes:
+      label: Format
+      options:
+        - PyTorch
+        - ONNX
+        - JAX
+        - TensorFlow
+        - LeRobot
+        - Docker image
+        - Other (write it below)
+    validations:
+      required: true
+  - type: textarea
+    id: compute
+    attributes:
+      label: Compute it needs
+      description: CPU only, or GPU type and memory. Expected time per 50 Hz step.
+  - type: dropdown
+    id: sharing
+    attributes:
+      label: Can the result be public?
+      options:
+        - Yes, post the report here and on the leaderboard
+        - Report here, but not on the leaderboard
+        - Private, send the report to me only
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What do you want to learn from the run?
+      description: Scores you care about, number of episodes, which variations, trial folders or videos you want back.
+    validations:
+      required: true
+  - type: input
+    id: contact
+    attributes:
+      label: Contact (optional)
+      description: A GitHub handle is enough. For private contact use https://affordance.homes.

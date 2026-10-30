@@ -1,0 +1,87 @@
+name: Submit a result
+description: Post your report.md to get your policy on the leaderboard.
+title: "[Result] "
+labels: ["leaderboard"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        How to produce the report: [docs/leaderboard.md](https://github.com/affordance-org/hri-eval/blob/main/docs/leaderboard.md).
+        Short version:
+        ```bash
+        python run.py --policy my_policy:MyPolicy --episodes 10 --seed 0
+        ```
+        Then paste `trials/MyPolicy/report.md` below. We add the row to the leaderboard table in the repository after a check.
+  - type: input
+    id: policy
+    attributes:
+      label: Policy name
+      description: The name you want in the leaderboard row.
+      placeholder: my-fetch-policy
+    validations:
+      required: true
+  - type: dropdown
+    id: interface
+    attributes:
+      label: Interface
+      options:
+        - Joint level (ControlOutput)
+        - Command level (CommandPolicy)
+    validations:
+      required: true
+  - type: checkboxes
+    id: information
+    attributes:
+      label: Information the policy uses
+      description: Tick everything your policy reads. See docs/rules.md.
+      options:
+        - label: Robot proprioception (q29, dq29, base orientation and angular velocity, finger positions, IMU)
+        - label: Localization (true pelvis position, heading and linear velocity)
+        - label: Person keypoints or bones at the current time
+        - label: Object poses (true backpack pose)
+        - label: Full simulator state (ctx.qpos, ctx.qvel, ctx.d, ctx.scratch())
+        - label: Person contact forces (privileged, logged as such in events.json)
+  - type: input
+    id: command
+    attributes:
+      label: Command you ran
+      placeholder: python run.py --policy my_policy:MyPolicy --episodes 10 --seed 0
+    validations:
+      required: true
+  - type: input
+    id: commit
+    attributes:
+      label: hri-eval commit
+      description: Output of `git rev-parse HEAD` in your clone.
+    validations:
+      required: true
+  - type: input
+    id: code
+    attributes:
+      label: Link to the policy code (optional)
+  - type: textarea
+    id: report
+    attributes:
+      label: report.md
+      description: Paste the whole file.
+      render: markdown
+    validations:
+      required: true
+  - type: checkboxes
+    id: rules
+    attributes:
+      label: Rules
+      options:
+        - label: The policy does not write to the simulation (no state, force or model writes).
+          required: true
+        - label: I did not change files in hri_eval/ or the scene (the report.md header says local changes none).
+          required: true
+        - label: The policy reads the person only at the current time, never future poses of the recording.
+          required: true
+        - label: I used the default --max-time 24 and --scenario point-fetch.
+          required: true
+  - type: input
+    id: contact
+    attributes:
+      label: Contact (optional)
+      description: A GitHub handle is enough. For private contact use https://affordance.homes.
