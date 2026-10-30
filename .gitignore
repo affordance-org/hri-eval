@@ -1,0 +1,3 @@
+__pycache__/
+trials/
+hri_eval/policy/*.onnx

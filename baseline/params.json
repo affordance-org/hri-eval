@@ -1,0 +1,264 @@
+{
+ "point_elbow_deg": 150.0,
+ "point_reach_m": 0.45,
+ "point_hold_s": 0.3,
+ "target_max_deg": 15.0,
+ "target_margin_deg": 5.0,
+ "target_hold_s": 0.25,
+ "grasp_site": "bag_grasp_top_flip",
+ "t_approach": 2.4,
+ "approach_mid": null,
+ "lead": 0.3,
+ "stop_tol": 0.04,
+ "v_max": 0.8,
+ "stop_tol_carry": 0.05,
+ "stance_yaw_deg": 0.0,
+ "stance_f": 0.38,
+ "stance_l": 0.12,
+ "t_arm_blend": 2.0,
+ "t_raise": 1.0,
+ "raise_rel": [
+  0.3,
+  0.12,
+  0.92
+ ],
+ "pre_up": 0.14,
+ "app_up": 0.15,
+ "t_pre": 0.5,
+ "pre_tol": 0.015,
+ "t_pre_max": 0.6,
+ "t_desc": 1.8,
+ "t_stop_max": 0.8,
+ "pf_kp": 1.0,
+ "pf_ki": 0.2,
+ "t_close": 0.35,
+ "finger_open": -0.035,
+ "finger_close": 0.05,
+ "wr_grasp": 1.0,
+ "align_tol": 0.0025,
+ "t_align_max": 0.6,
+ "slip_max": 0.0,
+ "r_shoulder_roll": -0.22,
+ "base_h": 0.78,
+ "t_lift": 2.0,
+ "lift": 0.28,
+ "t_hold": 0.4,
+ "backup": [
+  0.0,
+  -0.45
+ ],
+ "t_back": 1.5,
+ "back_yaw_deg": -90,
+ "t_turn": 1.5,
+ "turn_end_d": [
+  -0.05,
+  -0.4
+ ],
+ "carry_rel": [
+  0.04,
+  0.4,
+  0.915
+ ],
+ "back_rel": [
+  0.04,
+  0.4
+ ],
+ "t_walk": 5.0,
+ "v_max_carry": 0.35,
+ "wz_max_carry": 0.8,
+ "walk_d": [
+  -0.15,
+  -0.2
+ ],
+ "t_walk1": 1.0,
+ "back_u": 1.0,
+ "d_final": 0.15,
+ "t_final": 1.0,
+ "present_site": "bag_top_center",
+ "nfar_yaw_deg": 95.0,
+ "present_dist": 0.45,
+ "present_lat": 0.0,
+ "present_z": 1.0,
+ "present_rel": [
+  0.04,
+  0.4
+ ],
+ "t_present": 0.45,
+ "hand_yaw_lim": [
+  -150.0,
+  -80.0
+ ],
+ "present_settle": 0.6,
+ "t_carry_extra": 0.8,
+ "heading_mode": "face",
+ "t_present_hold": 2.0,
+ "damp_k": 0.0,
+ "damp_leak": 0.6,
+ "damp_max": 0.03,
+ "arm_kp_scale": 2.0,
+ "ik_iters": 10,
+ "wr_carry": 0.6,
+ "cart_ki": 0.06,
+ "cart_imax": 0.03,
+ "dq_max_left": 0.08,
+ "dq_max_right": 0.02,
+ "dq_max_hold": 0.02,
+ "drop_z": 0.15,
+ "drop_close": 0.004,
+ "t_after_drop": 1.0,
+ "t_after_stop": 2.0,
+ "nat": 1.97,
+ "torso_rpy_grasp": [
+  0.0,
+  0.0,
+  0.0
+ ],
+ "t_torso_in": 1.5,
+ "t_torso_out": 1.5,
+ "carry_axis_only": false,
+ "ik_seeds_extra": [
+  [
+   -0.56,
+   0.21,
+   -0.69,
+   0.82,
+   0.79,
+   0.39,
+   -0.29
+  ],
+  [
+   -0.63,
+   0.52,
+   -0.73,
+   -0.04,
+   0.92,
+   0.81,
+   -1.0
+  ]
+ ],
+ "descent_check": true,
+ "desc_mode": "v10",
+ "carry_accel": [
+  0.6,
+  0.5
+ ],
+ "arm_kp_scale_carry": 1.0,
+ "carry_arm_frozen": true,
+ "carry_mode": "turn_walk",
+ "dq_max_carry": null,
+ "base_h_carry": null,
+ "finger_hold_mode": "contact",
+ "finger_squeeze_m": 0.0068,
+ "t_finger_ramp": 0.3,
+ "torso_out_at": "carry",
+ "carry_frame_tau": 0.4,
+ "back_z": null,
+ "desc_hold": 0.03,
+ "t_insert": 0.8,
+ "align_tol_x": 0.003,
+ "align_tol_z": 0.005,
+ "watch_pitch": 0.0,
+ "watch_ramp": 0.3,
+ "unlean_T": 0.5,
+ "plan_upright": true,
+ "plan_waist": null,
+ "recipient_motion_fps": null,
+ "reason_back": "step back west of the table while turning right, arm holds the bag",
+ "reason_turn": "turn toward the person while bringing the bag to the front-left carry pose",
+ "reason_carry": "walk to the presentation stance carrying the bag in front of the body (PI path follower), arm frozen",
+ "reason_carry_path": "turn in place while stepping back from the table, walk straight to the presentation stance and turn to face the person",
+ "grasp_pos_bag": [
+  -0.05017,
+  0.01895,
+  0.36849
+ ],
+ "grasp_tilt_deg": 45.0,
+ "grasp_yaw_deg": -2.5,
+ "grasp_pad_x_mm": -7.5,
+ "approach_mode": "auto2",
+ "approach_v": 0.3,
+ "approach_wz": 0.9,
+ "approach_min_T": 2.0,
+ "approach_turn_T": 0.8,
+ "approach_back": 0.15,
+ "t_arm_delay": 0.5,
+ "stow_rel": null,
+ "t_stow": 1.5,
+ "stow_hold": 0.3,
+ "t_turn_carry": 2.0,
+ "carry_back": 0.2,
+ "v_carry": 0.3,
+ "carry_back_first": 1.2,
+ "present_anchor": "chest",
+ "face_bone": "spine_03",
+ "reason_stow": "bring the lifted bag to the carry pose in front of the body (online IK, standing)",
+ "ik_order": "grasp_first",
+ "ik_limits": {
+  "1": [
+   0.05,
+   3.0
+  ],
+  "2": [
+   -1.3,
+   1.3
+  ],
+  "3": [
+   -0.8,
+   1.55
+  ],
+  "4": [
+   -1.9,
+   1.9
+  ],
+  "6": [
+   -1.3,
+   1.3
+  ]
+ },
+ "pre_vertical": true,
+ "raise_mid": [
+  -0.5,
+  0.4,
+  -0.3,
+  0.5,
+  0.6,
+  0.3,
+  -0.2
+ ],
+ "ik_self_clear": 0.015,
+ "global_max_jump": 0.3,
+ "ik_w_post": 0.0,
+ "lift_mode": "joint_path",
+ "lift_n": 12,
+ "dq_max_lift": 0.03,
+ "lift_profile": "minjerk",
+ "approach_step_T": 0.8,
+ "start_note": "Chosen so that the assumed head camera sees the person, his pointing arm and all four tabletop objects unoccluded for the whole pointing gesture, from the open floor between the tall shelf and the bed, 1.9 m or more from the person.",
+ "headcam": {
+  "name": "head_cam",
+  "body": "torso_link",
+  "pos": [
+   0.071,
+   0.0,
+   0.435
+  ],
+  "quat_wxyz": [
+   0.5792279653395692,
+   0.40557978767263886,
+   -0.40557978767263886,
+   -0.5792279653395691
+  ],
+  "pitch_down_deg": 20.0,
+  "hfov_deg": 110.0,
+  "fovy_deg": 77.55214222201174,
+  "aspect": 1.7777777777777777
+ },
+ "vis_margin": 0.05,
+ "vis_obj_frac": 0.5,
+ "vis_obj_samples": [
+  48,
+  24
+ ],
+ "see_min_kp": 6,
+ "arm_ready_at_Q": true
+}

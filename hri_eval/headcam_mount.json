@@ -1,0 +1,38 @@
+{
+ "name": "head_cam",
+ "body": "torso_link",
+ "pos": [
+  0.071,
+  0.0,
+  0.435
+ ],
+ "quat_wxyz": [
+  0.560985526796931,
+  0.4304593345768794,
+  -0.4304593345768794,
+  -0.5609855267969309
+ ],
+ "pitch_down_deg": 15.0,
+ "hfov_deg": 100.0,
+ "fovy_deg": 67.67274797076357,
+ "aspect": 1.7777777777777777,
+ "convention": "MuJoCo camera: looks along -z, +y up, +x right; quat wxyz camera->body frame",
+ "quat_xyzw": [
+  0.4304593345768794,
+  -0.4304593345768794,
+  -0.5609855267969309,
+  0.560985526796931
+ ],
+ "forward_axis_in_body": [
+  0.9659258262890683,
+  -0.0,
+  -0.25881904510252074
+ ],
+ "up_axis_in_body": [
+  0.25881904510252074,
+  0.0,
+  0.9659258262890683
+ ],
+ "assumed_sensor": "ASSUMED head camera: not on the stock G1 (whose only head camera is the D435 pitched 47.6 deg down, fovy 58). A forward-looking wide-angle RGB camera behind the visor band of the face, on the head centre line, 13.4 mm in front of, 17.5 mm right of and 5.1 mm above the stock D435 optical centre (1-2 mm proud of the visor surface)",
+ "not_in_physics_model": "a camera adds no mass, contact or actuation; it is kept OUT of the physics/gate model (trial.xml unchanged); poses come from torso_link and this mount; renders use headcam.render_model (a render-only copy with the camera added)"
+}
