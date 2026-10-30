@@ -1,6 +1,6 @@
 # HRI Eval
 
-https://github.com/user-attachments/assets/9f9f6c20-cfe0-4b2f-93f4-ab1914502f2b
+![HRI Eval](https://github.com/user-attachments/assets/7c36e5ae-86d0-4709-bec9-ab9d6dfe78f0)
 
 Evaluating robots around people is hard. Testing with real people isn't safe, and simulated people don't move like real ones.
 
