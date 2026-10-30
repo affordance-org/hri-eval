@@ -16,7 +16,7 @@ import episode as E
 
 class MyPolicy:
     def reset(self, ctx): ...
-    def policy_step(self, ctx):  # 50 Hz: robot state in, 29 joint targets and 4 gripper fingers out
+    def policy_step(self, ctx):  # 50 Hz
         return E.ControlOutput(q_target=q, kp=kp, kd=kd, fingers=f)
 ```
 
